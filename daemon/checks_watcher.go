@@ -46,9 +46,15 @@ out:
 		default:
 		}
 
-		checksMap := makeChecksMap(checks)
-		logChecksChange(checksState, checksMap, logger)
-		checksState = checksMap
+		logChecksChange(checksState, checks, logger)
+		checksState = make(checksMap)
+		for _, check := range checks {
+			checksState[check.CheckID] = &api.HealthCheck{
+				CheckID: check.CheckID,
+				Output:  check.Output,
+				Status:  check.Status,
+			}
+		}
 
 		if err != nil {
 			log.Printf("failed getting consul checks for service %s, retrying in %s: %s", w.service, w.config.ErrorTimeout, err)
@@ -66,7 +72,7 @@ func (w *ChecksWatcher) Stop() {
 	<-w.done
 }
 
-func logChecksChange(a checksMap, b checksMap, logger HealthCheckLogger) {
+func logChecksChange(a checksMap, b api.HealthChecks, logger HealthCheckLogger) {
 	for _, check := range b {
 		id := check.CheckID
 		lastCheck := a[id]
@@ -81,12 +87,4 @@ func logChecksChange(a checksMap, b checksMap, logger HealthCheckLogger) {
 			log.Printf("failed logging check %s: %s", id, err)
 		}
 	}
-}
-
-func makeChecksMap(checks api.HealthChecks) (m checksMap) {
-	m = make(checksMap)
-	for _, check := range checks {
-		m[check.CheckID] = check
-	}
-	return
 }
