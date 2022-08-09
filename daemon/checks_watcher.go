@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/hashicorp/consul/api"
 	"log"
-	"time"
 )
 
 type checksMap map[string]*api.HealthCheck
@@ -46,6 +45,18 @@ out:
 		default:
 		}
 
+		if err != nil {
+			log.Printf("failed getting consul checks for service %s, retrying in %s: %s", w.service, w.config.ErrorTimeout, err)
+			if !Sleep(w.ctx, w.config.ErrorTimeout) {
+				break
+			}
+			continue
+		}
+
+		if qm.LastIndex == q.WaitIndex {
+			continue
+		}
+
 		logChecksChange(checksState, checks, logger)
 		checksState = make(checksMap)
 		for _, check := range checks {
@@ -56,11 +67,6 @@ out:
 			}
 		}
 
-		if err != nil {
-			log.Printf("failed getting consul checks for service %s, retrying in %s: %s", w.service, w.config.ErrorTimeout, err)
-			time.Sleep(w.config.ErrorTimeout * time.Second)
-			continue
-		}
 		q.WaitIndex = qm.LastIndex
 	}
 

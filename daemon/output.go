@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	"os"
 	"sync"
+	"time"
 )
 
 type HealthCheckLogger interface {
@@ -42,6 +43,7 @@ func (l *JsonHealthCheckLogger) log(check *api.HealthCheck) error {
 		"ServiceName": check.ServiceName,
 		"ServiceTags": check.ServiceTags,
 		"Type":        check.Type,
+		"Time":        time.Now().Format(time.RFC3339),
 	})
 	if err != nil {
 		return err

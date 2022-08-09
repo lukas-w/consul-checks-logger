@@ -13,18 +13,21 @@ func WatchServices(client *api.Client, ctx context.Context, servicesChan chan<- 
 	catalog := client.Catalog()
 	q := (&api.QueryOptions{}).WithContext(ctx)
 
+out:
 	for {
 		services, qm, err := catalog.Services(q)
 		select {
 		case <-ctx.Done():
-			break
+			break out
 		default:
 		}
 
 		if err != nil {
-			log.Printf("failed getting consul services, retrying in %s: %s", errorTimeout, err)
+			log.Printf("failed getting consul services, stopping service watchers and retrying in %s: %s", errorTimeout, err)
 			servicesChan <- serviceMap{}
-			time.Sleep(errorTimeout)
+			if !Sleep(ctx, errorTimeout) {
+				break
+			}
 		} else {
 			q.WaitIndex = qm.LastIndex
 			servicesChan <- services
